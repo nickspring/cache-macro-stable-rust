@@ -171,8 +171,8 @@
 //! }
 //! ```
 //!
-#![feature(extern_crate_item_prelude)]
-#![feature(proc_macro_diagnostic)]
+//#![feature(extern_crate_item_prelude)]
+//#![feature(proc_macro_diagnostic)]
 #![recursion_limit="128"]
 extern crate proc_macro;
 
@@ -228,9 +228,7 @@ fn lru_cache_impl(attr: Attr, item: TokenStream) -> Result<TokenStream> {
     let mut original_fn: syn::ItemFn = match syn::parse(item.clone()) {
         Ok(ast) => ast,
         Err(e) => {
-            let diag = proc_macro2::Span::call_site().unstable()
-                .error("lru_cache may only be used on functions");
-            return Err(DiagnosticError::new_with_syn_error(diag, e));
+            return Err(DiagnosticError::new_with_syn_error(String::from("lru_cache may only be used on functions"), e));
         }
     };
 
@@ -365,9 +363,7 @@ fn get_cache_fn_return_type(original_fn: &syn::ItemFn) -> Result<Box<syn::Type>>
     if let syn::ReturnType::Type(_, ref ty) = original_fn.decl.output {
         Ok(ty.clone())
     } else {
-        let diag = original_fn.ident.span().unstable()
-            .error("There's no point of caching the output of a function that has no output");
-        return Err(DiagnosticError::new(diag));
+        return Err(DiagnosticError::new(String::from("There's no point of caching the output of a function that has no output")));
     }
 }
 
@@ -407,15 +403,11 @@ fn get_args_and_types(f: &syn::ItemFn, config: &config::Config) ->
 
     for input in &f.decl.inputs {
         match input {
-            syn::FnArg::SelfValue(p) => {
-                let diag = p.span().unstable()
-                    .error("`self` arguments are currently unsupported by lru_cache");
-                return Err(DiagnosticError::new(diag));
+            syn::FnArg::SelfValue(_p) => {
+                return Err(DiagnosticError::new(String::from("`self` arguments are currently unsupported by lru_cache")));
             }
-            syn::FnArg::SelfRef(p) => {
-                let diag = p.span().unstable()
-                    .error("`&self` arguments are currently unsupported by lru_cache");
-                return Err(DiagnosticError::new(diag));
+            syn::FnArg::SelfRef(_p) => {
+                return Err(DiagnosticError::new(String::from("`&self` arguments are currently unsupported by lru_cache")));
             }
             syn::FnArg::Captured(arg_captured) => {
                 let mut segments: syn::punctuated::Punctuated<_, Token![::]> = syn::punctuated::Punctuated::new();
@@ -424,9 +416,7 @@ fn get_args_and_types(f: &syn::ItemFn, config: &config::Config) ->
                     arg_name = pat_ident.ident.clone();
                     segments.push(syn::PathSegment { ident: pat_ident.ident.clone(), arguments: syn::PathArguments::None });
                 } else {
-                    let diag = arg_captured.span().unstable()
-                        .error("unsupported argument kind");
-                    return Err(DiagnosticError::new(diag));
+                    return Err(DiagnosticError::new(String::from("unsupported argument kind")));
                 }
 
                 let arg_path = syn::Expr::Path(syn::ExprPath { attrs: Vec::new(), qself: None, path: syn::Path { leading_colon: None, segments } });
@@ -435,10 +425,8 @@ fn get_args_and_types(f: &syn::ItemFn, config: &config::Config) ->
 
                     // If the arg type is a reference, remove the reference because the arg will be cloned
                     if let syn::Type::Reference(type_reference) = &arg_captured.ty {
-                        if let Some(m) = type_reference.mutability {
-                            let diag = m.span.unstable()
-                                .error("`mut` reference arguments are not supported as this could lead to incorrect results being stored");
-                            return Err(DiagnosticError::new(diag));
+                        if let Some(_m) = type_reference.mutability {
+                            return Err(DiagnosticError::new(String::from("`mut` reference arguments are not supported as this could lead to incorrect results being stored")));
                         }
                         types.push(type_reference.elem.as_ref().to_owned()); // as_ref -> to_owned unboxes the type
                     } else {
@@ -451,15 +439,11 @@ fn get_args_and_types(f: &syn::ItemFn, config: &config::Config) ->
 
                 call_args.push(arg_path);
             },
-            syn::FnArg::Inferred(p) => {
-                let diag = p.span().unstable()
-                    .error("inferred arguments are currently unsupported by lru_cache");
-                return Err(DiagnosticError::new(diag));
+            syn::FnArg::Inferred(_p) => {
+                return Err(DiagnosticError::new(String::from("inferred arguments are currently unsupported by lru_cache")));
             }
-            syn::FnArg::Ignored(p) => {
-                let diag = p.span().unstable()
-                    .error("ignored arguments are currently unsupported by lru_cache");
-                return Err(DiagnosticError::new(diag));
+            syn::FnArg::Ignored(_p) => {
+                return Err(DiagnosticError::new(String::from("ignored arguments are currently unsupported by lru_cache")));
             }
         }
     }

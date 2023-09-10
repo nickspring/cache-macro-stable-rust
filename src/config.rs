@@ -1,7 +1,6 @@
 use std::default::Default;
 use std::collections::HashSet;
 
-use proc_macro2;
 use syn::{self, Token, parenthesized};
 use syn::parse::{Parse, ParseStream};
 
@@ -39,9 +38,7 @@ impl Config {
                     match parsed {
                         Ok(parsed_attrib) => parsed_attributes.push(parsed_attrib),
                         Err(e) => {
-                            let diag = e.span().unstable()
-                                .error(format!("{}", e));
-                            return Err(DiagnosticError::new_with_syn_error(diag, e));
+                            return Err(DiagnosticError::new_with_syn_error(format!("{}", e), e));
                         }
                     }
                 }
